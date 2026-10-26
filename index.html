@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>スロット小役カウンター</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slotDark: '#0f172a',
+                        slotCard: '#1e293b',
+                        slotBorder: '#334155'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .touch-active:active {
+            transform: scale(0.95);
+            opacity: 0.9;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-[100dvh] w-full flex flex-col justify-between overflow-hidden font-sans">
+
+    <!-- Top App Header -->
+    <header class="bg-slate-900 border-b border-slate-800 px-3 py-2.5 flex justify-between items-center z-20 shrink-0">
+        <div class="flex items-center gap-2 overflow-hidden">
+            <i class="fa-solid fa-gamepad text-amber-400 text-lg shrink-0"></i>
+            <h1 class="text-base font-bold tracking-wide bg-gradient-to-r from-amber-400 to-emerald-400 bg-clip-text text-transparent truncate">
+                スロットカウンター
+            </h1>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <!-- Clear All Counters Button -->
+            <button onclick="clearAllDataDirect()" class="px-3 py-1.5 bg-rose-950/80 border border-rose-800/80 hover:bg-rose-900 text-rose-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95">
+                <i class="fa-solid fa-eraser"></i> リセット
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 overflow-y-auto px-3 py-3 relative pb-20" id="mainContent">
+
+        <!-- TAB 1: COUNTER VIEW -->
+        <section id="tab-counter" class="space-y-3">
+            
+            <!-- Machine Preset Selector Bar -->
+            <div class="glass-panel p-2.5 rounded-2xl border border-slate-800 shadow-md flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <i class="fa-solid fa-compact-disc text-amber-400 text-sm shrink-0"></i>
+                    <select id="machineSelect" onchange="switchMachinePreset(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-amber-300 font-bold rounded-xl px-2 py-2 focus:outline-none focus:border-amber-400 w-full truncate">
+                        <!-- Options injected by JS -->
+                    </select>
+                </div>
+                <button onclick="openModal('addMachineModal')" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 text-xs px-2.5 py-2 rounded-xl font-bold shrink-0 flex items-center gap-1 active:scale-95">
+                    <i class="fa-solid fa-plus text-amber-400"></i> 機種追加
+                </button>
+            </div>
+
+            <!-- Games Panel (Total Games + AT Games) -->
+            <div class="glass-panel p-3.5 rounded-2xl border border-slate-800 shadow-lg space-y-3">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-slate-400 tracking-wider">GAMES (ゲーム数管理)</span>
+                    <button onclick="openGamesModal()" class="text-xs text-amber-400 hover:underline flex items-center gap-1">
+                        <i class="fa-solid fa-pen-to-square"></i> 直接入力
+                    </button>
+                </div>
+                
+                <!-- Main Game Numbers Row -->
+                <div class="grid grid-cols-2 gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-semibold">総ゲーム数</div>
+                        <div class="text-2xl font-extrabold font-mono text-amber-400" id="totalGamesDisplay">0 <span class="text-xs text-slate-400 font-normal">G</span></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] text-emerald-400 font-semibold">通常時ゲーム数</div>
+                        <div class="text-2xl font-extrabold font-mono text-emerald-400" id="normalGamesDisplay">0 <span class="text-xs text-slate-400 font-normal">G</span></div>
+                    </div>
+                </div>
+
+                <!-- Total Games Control Block -->
+                <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800/60 space-y-1">
+                    <div class="text-[10px] font-bold text-amber-400 flex justify-between items-center">
+                        <span>総G数 調整</span>
+                    </div>
+                    <div class="grid grid-cols-6 gap-1">
+                        <button onclick="addGames(-100)" class="touch-active bg-rose-950/60 border border-rose-800/80 text-rose-300 font-bold text-xs py-1.5 rounded-lg">-100</button>
+                        <button onclick="addGames(-10)" class="touch-active bg-rose-950/60 border border-rose-800/80 text-rose-300 font-bold text-xs py-1.5 rounded-lg">-10</button>
+                        <button onclick="addGames(-1)" class="touch-active bg-rose-950/60 border border-rose-800/80 text-rose-300 font-bold text-xs py-1.5 rounded-lg">-1</button>
+                        <button onclick="addGames(1)" class="touch-active bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs py-1.5 rounded-lg shadow">+1</button>
+                        <button onclick="addGames(10)" class="touch-active bg-slate-800 border border-slate-700 text-amber-300 font-bold text-xs py-1.5 rounded-lg">+10</button>
+                        <button onclick="addGames(100)" class="touch-active bg-slate-800 border border-slate-700 text-amber-300 font-bold text-xs py-1.5 rounded-lg">+100</button>
+                    </div>
+                </div>
+
+                <!-- AT Games Control Block -->
+                <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800/60 space-y-1">
+                    <div class="text-[10px] font-bold text-purple-400 flex justify-between items-center">
+                        <span>AT中G数 調整</span>
+                        <span class="text-xs font-extrabold font-mono text-purple-300" id="atGamesDisplay">0 G</span>
+                    </div>
+                    <div class="grid grid-cols-6 gap-1">
+                        <button onclick="addAtGames(-100)" class="touch-active bg-rose-950/60 border border-rose-800/80 text-rose-300 font-bold text-xs py-1.5 rounded-lg">-100</button>
+                        <button onclick="addAtGames(-10)" class="touch-active bg-rose-950/60 border border-rose-800/80 text-rose-300 font-bold text-xs py-1.5 rounded-lg">-10</button>
+                        <button onclick="addAtGames(-1)" class="touch-active bg-rose-950/60 border border-rose-800/80 text-rose-300 font-bold text-xs py-1.5 rounded-lg">-1</button>
+                        <button onclick="addAtGames(1)" class="touch-active bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs py-1.5 rounded-lg shadow">+1</button>
+                        <button onclick="addAtGames(10)" class="touch-active bg-purple-900/60 border border-purple-700/80 text-purple-300 font-bold text-xs py-1.5 rounded-lg">+10</button>
+                        <button onclick="addAtGames(100)" class="touch-active bg-purple-900/60 border border-purple-700/80 text-purple-300 font-bold text-xs py-1.5 rounded-lg">+100</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Counter Cards List -->
+            <div id="counterList" class="space-y-3">
+                <!-- Dynamic Counters Loaded Here -->
+            </div>
+
+            <!-- Add Custom Counter Button -->
+            <button onclick="openModal('addCounterModal')" class="w-full py-3.5 rounded-xl border border-dashed border-slate-700 hover:border-slate-500 bg-slate-900/60 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-plus text-amber-400"></i> 新しいカウンター項目を追加
+            </button>
+        </section>
+
+        <!-- TAB 2: SETTINGS VIEW -->
+        <section id="tab-settings" class="space-y-4 hidden">
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-4">
+                <h2 class="text-sm font-bold text-slate-300 border-b border-slate-800 pb-2">アプリ設定</h2>
+
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-200">タップ効果音 (Sound)</div>
+                        <div class="text-[10px] text-slate-400">カウント増減時にWeb Audio再生</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="soundToggle" onchange="toggleSoundSetting(this.checked)" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between border-t border-slate-800/60 pt-3">
+                    <div>
+                        <div class="text-xs font-bold text-slate-200">バイブレーション (Vibration)</div>
+                        <div class="text-[10px] text-slate-400">タップ時の振動フィードバック</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="vibeToggle" onchange="toggleVibeSetting(this.checked)" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                </div>
+
+                <div class="border-t border-slate-800/60 pt-3">
+                    <button onclick="clearAllDataDirect()" class="w-full py-2.5 bg-rose-950/60 border border-rose-800/60 hover:bg-rose-900/80 text-rose-300 text-xs font-bold rounded-xl transition">
+                        選択中機種の全データ（G数・カウント）をクリア
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-800 backdrop-blur-md px-2 py-2 z-30 pb-[env(safe-area-inset-bottom,8px)]">
+        <div class="max-w-md mx-auto grid grid-cols-2 gap-2">
+            <button onclick="switchTab('counter')" id="nav-counter" class="nav-btn flex flex-col items-center justify-center py-1 text-amber-400 font-bold transition">
+                <i class="fa-solid fa-calculator text-base mb-0.5"></i>
+                <span class="text-[10px]">カウンター</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center justify-center py-1 text-slate-400 transition">
+                <i class="fa-solid fa-gear text-base mb-0.5"></i>
+                <span class="text-[10px]">設定</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL 1: Edit Games Input -->
+    <div id="gamesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+            <h3 class="text-sm font-bold text-amber-400 mb-3 flex items-center gap-2">
+                ゲーム数 直接入力
+            </h3>
+            <div class="space-y-3 mb-4">
+                <div>
+                    <label class="text-[10px] text-slate-400 font-semibold">総ゲーム数</label>
+                    <input type="number" id="directGamesInput" placeholder="例: 1250" class="w-full bg-slate-950 border border-slate-700 text-lg font-mono text-center text-amber-300 py-2 rounded-xl focus:outline-none focus:border-amber-400">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 font-semibold">AT中ゲーム数</label>
+                    <input type="number" id="directAtGamesInput" placeholder="例: 450" class="w-full bg-slate-950 border border-slate-700 text-lg font-mono text-center text-purple-300 py-2 rounded-xl focus:outline-none focus:border-purple-400">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="closeModal('gamesModal')" class="flex-1 py-2.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl">キャンセル</button>
+                <button onclick="saveDirectGames()" class="flex-1 py-2.5 bg-amber-500 text-slate-950 text-xs font-bold rounded-xl">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Add Custom Counter Item -->
+    <div id="addCounterModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+            <h3 class="text-sm font-bold text-amber-400 mb-3">カウンター項目の作成</h3>
+            
+            <div class="space-y-3 mb-4">
+                <div>
+                    <label class="text-[10px] text-slate-400 uppercase font-semibold">小役・フラグ名</label>
+                    <input type="text" id="counterNameInput" placeholder="例: 共通ベル / 弱チェリー" class="w-full bg-slate-950 border border-slate-700 text-xs text-slate-100 p-2.5 rounded-xl focus:outline-none focus:border-amber-400 mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 uppercase font-semibold">アクセントカラー</label>
+                    <select id="counterColorInput" class="w-full bg-slate-950 border border-slate-700 text-xs text-slate-100 p-2.5 rounded-xl focus:outline-none mt-1">
+                        <option value="emerald">グリーン (緑)</option>
+                        <option value="rose">レッド (赤)</option>
+                        <option value="amber">ゴールド (黄)</option>
+                        <option value="blue">ブルー (青)</option>
+                        <option value="purple">パープル (紫)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="closeModal('addCounterModal')" class="flex-1 py-2.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl">キャンセル</button>
+                <button onclick="saveNewCounter()" class="flex-1 py-2.5 bg-amber-500 text-slate-950 text-xs font-bold rounded-xl">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Add New Machine Preset Modal -->
+    <div id="addMachineModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+            <h3 class="text-sm font-bold text-amber-400 mb-3">新しい機種セットの作成</h3>
+            <input type="text" id="newMachineNameInput" placeholder="機種名 (例: L東京喰種)" class="w-full bg-slate-950 border border-slate-700 text-xs text-slate-100 p-3 rounded-xl focus:outline-none focus:border-amber-400 mb-4">
+            <div class="flex gap-2">
+                <button onclick="closeModal('addMachineModal')" class="flex-1 py-2.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl">キャンセル</button>
+                <button onclick="createNewMachine()" class="flex-1 py-2.5 bg-amber-500 text-slate-950 text-xs font-bold rounded-xl">作成</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-16 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-amber-300 text-xs px-4 py-2 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">操作を完了しました</span>
+    </div>
+
+    <script>
+        const DEFAULT_PRESETS = {
+            'ghoul': {
+                name: 'L東京喰種',
+                totalGames: 0,
+                atGames: 0,
+                counters: [
+                    { id: 'g1', name: 'レミニセンス', count: 0, color: 'purple', useNormalG: false },
+                    { id: 'g2', name: '大喰いのリゼ', count: 0, color: 'rose', useNormalG: false },
+                    { id: 'g3', name: 'エピソード', count: 0, color: 'amber', useNormalG: false },
+                    { id: 'g4', name: '100G以内のCZ当選', count: 0, color: 'emerald', useNormalG: true },
+                    { id: 'g5', name: '初当たり時裏AT', count: 0, color: 'purple', useNormalG: true },
+                    { id: 'g6', name: 'AT引き戻し', count: 0, color: 'blue', useNormalG: false },
+                    { id: 'g7', name: 'リプレイのAT直撃', count: 0, color: 'amber', useNormalG: true },
+                    { id: 'g8', name: '赫眼リプレイ', count: 0, color: 'rose', useNormalG: false }
+                ]
+            }
+        };
+
+        let appState = {
+            activeMachineId: 'ghoul',
+            soundEnabled: true,
+            vibeEnabled: true,
+            machines: JSON.parse(JSON.stringify(DEFAULT_PRESETS))
+        };
+
+        const colorStyles = {
+            amber: { border: 'border-amber-500/40', bg: 'bg-amber-950/20', text: 'text-amber-400', btnBg: 'bg-amber-500 hover:bg-amber-400 text-slate-950' },
+            emerald: { border: 'border-emerald-500/40', bg: 'bg-emerald-950/20', text: 'text-emerald-400', btnBg: 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' },
+            rose: { border: 'border-rose-500/40', bg: 'bg-rose-950/20', text: 'text-rose-400', btnBg: 'bg-rose-500 hover:bg-rose-400 text-slate-950' },
+            blue: { border: 'border-blue-500/40', bg: 'bg-blue-950/20', text: 'text-blue-400', btnBg: 'bg-blue-500 hover:bg-blue-400 text-slate-950' },
+            purple: { border: 'border-purple-500/40', bg: 'bg-purple-950/20', text: 'text-purple-400', btnBg: 'bg-purple-500 hover:bg-purple-400 text-slate-950' }
+        };
+
+        let audioCtx = null;
+        function playBeep(type = 'add') {
+            if (!appState.soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                if (type === 'add') {
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else {
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(250, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                }
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }
+
+        function triggerVibration(ms = 30) {
+            if (appState.vibeEnabled && navigator.vibrate) {
+                try { navigator.vibrate(ms); } catch (e) {}
+            }
+        }
+
+        function getCurrentMachine() {
+            if (!appState.machines || !appState.machines[appState.activeMachineId]) {
+                appState.activeMachineId = Object.keys(appState.machines || {})[0] || 'ghoul';
+            }
+            const m = appState.machines[appState.activeMachineId];
+            if (m.atGames === undefined) m.atGames = 0;
+            return m;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSavedData();
+            renderMachineSelect();
+            updateUI();
+        });
+
+        function saveData() {
+            try {
+                localStorage.setItem('slot_counter_v3_data', JSON.stringify(appState));
+            } catch (e) {
+                console.error('Save failed:', e);
+            }
+        }
+
+        function loadSavedData() {
+            try {
+                const saved = localStorage.getItem('slot_counter_v3_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.machines) {
+                        appState = { ...appState, ...parsed };
+                    }
+                }
+                document.getElementById('soundToggle').checked = appState.soundEnabled;
+                document.getElementById('vibeToggle').checked = appState.vibeEnabled;
+            } catch (e) {
+                console.error('Load failed:', e);
+            }
+        }
+
+        function renderMachineSelect() {
+            const select = document.getElementById('machineSelect');
+            select.innerHTML = '';
+            Object.keys(appState.machines).forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.innerText = appState.machines[id].name;
+                if (id === appState.activeMachineId) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function switchMachinePreset(id) {
+            appState.activeMachineId = id;
+            saveData();
+            updateUI();
+            showToast(`${getCurrentMachine().name} に切り替えました`);
+        }
+
+        function createNewMachine() {
+            const input = document.getElementById('newMachineNameInput');
+            const name = input.value.trim();
+            if (!name) return;
+
+            const id = 'm_' + Date.now();
+            appState.machines[id] = {
+                name: name,
+                totalGames: 0,
+                atGames: 0,
+                counters: [
+                    { id: 'c1', name: '共通ベル', count: 0, color: 'amber', useNormalG: false },
+                    { id: 'c2', name: '弱チェリー', count: 0, color: 'rose', useNormalG: true },
+                    { id: 'c3', name: 'スイカ', count: 0, color: 'emerald', useNormalG: true }
+                ]
+            };
+
+            appState.activeMachineId = id;
+            input.value = '';
+            saveData();
+            renderMachineSelect();
+            updateUI();
+            closeModal('addMachineModal');
+            showToast('新しい機種を作成しました');
+        }
+
+        function clearAllDataDirect() {
+            const machine = getCurrentMachine();
+            machine.totalGames = 0;
+            machine.atGames = 0;
+            machine.counters.forEach(c => c.count = 0);
+            saveData();
+            updateUI();
+            playBeep('sub');
+            triggerVibration(40);
+            showToast('全データをリセットしました');
+        }
+
+        function addGames(amount) {
+            const m = getCurrentMachine();
+            m.totalGames = Math.max(0, m.totalGames + amount);
+            saveData();
+            updateGamesDisplay();
+            playBeep('add');
+            triggerVibration(20);
+        }
+
+        function addAtGames(amount) {
+            const m = getCurrentMachine();
+            m.atGames = Math.max(0, m.atGames + amount);
+            saveData();
+            updateGamesDisplay();
+            playBeep('add');
+            triggerVibration(20);
+        }
+
+        function updateGamesDisplay() {
+            const m = getCurrentMachine();
+            const normalG = Math.max(0, m.totalGames - m.atGames);
+
+            document.getElementById('totalGamesDisplay').innerHTML = `${m.totalGames} <span class="text-xs text-slate-400 font-normal">G</span>`;
+            document.getElementById('normalGamesDisplay').innerHTML = `${normalG} <span class="text-xs text-slate-400 font-normal">G</span>`;
+            document.getElementById('atGamesDisplay').innerText = `${m.atGames} G`;
+
+            renderCounters();
+        }
+
+        function openGamesModal() {
+            const m = getCurrentMachine();
+            document.getElementById('directGamesInput').value = m.totalGames;
+            document.getElementById('directAtGamesInput').value = m.atGames || 0;
+            openModal('gamesModal');
+        }
+
+        function saveDirectGames() {
+            const valTotal = parseInt(document.getElementById('directGamesInput').value, 10);
+            const valAt = parseInt(document.getElementById('directAtGamesInput').value, 10);
+
+            const m = getCurrentMachine();
+            if (!isNaN(valTotal) && valTotal >= 0) m.totalGames = valTotal;
+            if (!isNaN(valAt) && valAt >= 0) m.atGames = valAt;
+
+            saveData();
+            updateGamesDisplay();
+            closeModal('gamesModal');
+            showToast('ゲーム数を変更しました');
+        }
+
+        function toggleUseNormalG(counterId, isNormal) {
+            const m = getCurrentMachine();
+            const counter = m.counters.find(c => c.id === counterId);
+            if (counter) {
+                counter.useNormalG = isNormal;
+                saveData();
+                renderCounters();
+                playBeep('add');
+                triggerVibration(15);
+            }
+        }
+
+        function changeCounterCount(id, delta) {
+            const m = getCurrentMachine();
+            const counter = m.counters.find(c => c.id === id);
+            if (counter) {
+                counter.count = Math.max(0, counter.count + delta);
+                saveData();
+                renderCounters();
+                playBeep(delta > 0 ? 'add' : 'sub');
+                triggerVibration(delta > 0 ? 25 : 15);
+            }
+        }
+
+        function calculateRatioStr(count, games) {
+            if (count === 0 || games === 0) return '1/--';
+            const val = games / count;
+            return `1/${val.toFixed(1)}`;
+        }
+
+        function renderCounters() {
+            const m = getCurrentMachine();
+            const container = document.getElementById('counterList');
+            container.innerHTML = '';
+
+            const normalG = Math.max(0, m.totalGames - m.atGames);
+
+            m.counters.forEach((item) => {
+                const style = colorStyles[item.color] || colorStyles.amber;
+                const isNormalG = item.useNormalG !== false;
+                const targetGames = isNormalG ? normalG : m.totalGames;
+                const ratioStr = calculateRatioStr(item.count, targetGames);
+
+                const card = document.createElement('div');
+                card.className = `glass-panel ${style.bg} ${style.border} border p-3 rounded-2xl flex flex-col justify-between shadow-md relative overflow-hidden`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-1 gap-1">
+                        <span class="font-bold text-xs text-slate-100 tracking-wide truncate flex-1">${escapeHtml(item.name)}</span>
+                        
+                        <!-- Y/N Radio Toggle Switch for Normal Games -->
+                        <div class="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-lg border border-slate-800 shrink-0">
+                            <span class="text-[9px] text-slate-400 px-1 font-semibold">通常時:</span>
+                            <button onclick="toggleUseNormalG('${item.id}', true)" class="px-2 py-0.5 text-[10px] font-bold rounded-md transition ${isNormalG ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                                Y
+                            </button>
+                            <button onclick="toggleUseNormalG('${item.id}', false)" class="px-2 py-0.5 text-[10px] font-bold rounded-md transition ${!isNormalG ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}">
+                                N
+                            </button>
+                        </div>
+
+                        <button onclick="deleteCounter('${item.id}')" class="text-slate-500 hover:text-rose-400 text-xs p-1 ml-1 shrink-0">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-3 mt-1.5">
+                        <button onclick="changeCounterCount('${item.id}', -1)" class="w-16 h-14 bg-slate-800/90 hover:bg-slate-700/90 active:bg-rose-950 border border-slate-700 hover:border-rose-500/50 text-rose-400 rounded-xl flex items-center justify-center font-extrabold text-xl shadow touch-active shrink-0">
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+
+                        <div class="flex-1 text-center py-1">
+                            <div class="text-4xl font-extrabold font-mono tracking-tight ${style.text}">${item.count}</div>
+                            <div class="text-[10px] font-mono font-semibold text-slate-400 mt-0.5">
+                                ${ratioStr} <span class="text-[9px] opacity-75">(${isNormalG ? '通常G' : '総G'})</span>
+                            </div>
+                        </div>
+
+                        <button onclick="changeCounterCount('${item.id}', 1)" class="w-24 h-14 ${style.btnBg} rounded-xl flex items-center justify-center font-extrabold text-2xl shadow-lg touch-active shrink-0">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function deleteCounter(id) {
+            const m = getCurrentMachine();
+            m.counters = m.counters.filter(c => c.id !== id);
+            saveData();
+            renderCounters();
+            showToast('項目を削除しました');
+        }
+
+        function saveNewCounter() {
+            const nameInput = document.getElementById('counterNameInput').value.trim();
+            const colorInput = document.getElementById('counterColorInput').value;
+
+            if (!nameInput) {
+                showToast('名前を入力してください');
+                return;
+            }
+
+            const m = getCurrentMachine();
+            m.counters.push({
+                id: 'c_' + Date.now(),
+                name: nameInput,
+                count: 0,
+                color: colorInput,
+                useNormalG: true
+            });
+
+            saveData();
+            renderCounters();
+            closeModal('addCounterModal');
+            document.getElementById('counterNameInput').value = '';
+            showToast('カウンター項目を追加しました');
+        }
+
+        function updateUI() {
+            updateGamesDisplay();
+            renderCounters();
+        }
+
+        function toggleSoundSetting(val) { appState.soundEnabled = val; saveData(); }
+        function toggleVibeSetting(val) { appState.vibeEnabled = val; saveData(); }
+
+        function switchTab(tabName) {
+            ['counter', 'settings'].forEach(t => {
+                const section = document.getElementById(`tab-${t}`);
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (t === tabName) {
+                    section.classList.remove('hidden');
+                    navBtn.classList.add('text-amber-400', 'font-bold');
+                    navBtn.classList.remove('text-slate-400');
+                } else {
+                    section.classList.add('hidden');
+                    navBtn.classList.remove('text-amber-400', 'font-bold');
+                    navBtn.classList.add('text-slate-400');
+                }
+            });
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, function (m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+    </script>
+</body>
+</html>
